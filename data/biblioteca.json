@@ -1,0 +1,80 @@
+{
+    "libros": [
+        {
+            "titulo": "La casa de los esp\u00edritus",
+            "autor": "Isabel Allende",
+            "isbn": "978-8466333559",
+            "anio": 1982,
+            "genero": "Realismo m\u00e1gico",
+            "disponible": true,
+            "ejemplares": 3
+        },
+        {
+            "titulo": "El Conde de Montecristo",
+            "autor": "Alejandro Dumas",
+            "isbn": "978-8467046038",
+            "anio": 1844,
+            "genero": "Novela de aventuras",
+            "disponible": true,
+            "ejemplares": 6
+        },
+        {
+            "titulo": "Hamlet",
+            "autor": "William Shakespeare",
+            "isbn": "978-8437604466",
+            "anio": 1603,
+            "genero": "Tragedia (Teatro)",
+            "disponible": true,
+            "ejemplares": 1
+        }
+    ],
+    "usuarios": [
+        {
+            "id": "fa98832f-b685-4386-b987-af76675a7240",
+            "rol": "Alumno",
+            "nombre": "Juan David",
+            "email": "david@email.com"
+        },
+        {
+            "id": "2d0cb5dd-b251-49f9-92c9-10a99c6b6506",
+            "rol": "Alumno",
+            "nombre": "Oscar Guadalupe",
+            "email": "oscar@email.com"
+        },
+        {
+            "id": "7c2575be-395a-4c90-bec2-628100070908",
+            "rol": "Alumno",
+            "nombre": "Nico Robin",
+            "email": "robin@email.com"
+        }
+    ],
+    "prestamos": [
+        {
+            "id": "ab1e1d98-8b86-4573-8c82-dd7fdc084dbf",
+            "usuario_email": "robin@email.com",
+            "libro_isbn": "978-8437604466",
+            "fecha_prestamo": "2026-05-04T20:46:24.889589",
+            "fecha_devolucion": "2026-05-04T20:50:01.771729",
+            "multa": 0.0,
+            "activo": false
+        },
+        {
+            "id": "e2c39d91-e823-47e9-9d02-6edeca89a707",
+            "usuario_email": "david@email.com",
+            "libro_isbn": "978-8437604466",
+            "fecha_prestamo": "2026-05-04T20:46:44.227021",
+            "fecha_devolucion": "2026-05-04T20:48:25.709552",
+            "multa": 0.0,
+            "activo": false
+        },
+        {
+            "id": "366581a9-b640-4f58-ba4e-301300ba5cc9",
+            "usuario_email": "oscar@email.com",
+            "libro_isbn": "978-8437604466",
+            "fecha_prestamo": "2026-05-04T20:49:33.785144",
+            "fecha_devolucion": null,
+            "multa": 0.0,
+            "activo": true
+        }
+    ]
+}
