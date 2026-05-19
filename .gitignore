@@ -1,0 +1,7 @@
+# Archivos temporales de Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Excluir la carpeta de datos como pide el proyecto
+datos/*.json
