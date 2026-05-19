@@ -6,6 +6,8 @@ import os
 from typing import Protocol
 from datetime import datetime
 
+from typing import Union, List, Dict
+from repositories.sqlite_repo import SQLiteRepository
 from modelos.libro import Libro, LibroDigital, LibroFisico
 from modelos.usuario import Usuario, Alumno, Profesor, Administrador
 from servicios.prestamo import Prestamo
@@ -26,10 +28,19 @@ class Catalogo:
         self.libros: list[Libro] = []
         self.usuarios: dict[str, Usuario] = {} # El email será la clave del diccionario
         self.prestamos: list[Prestamo] = []
+        
+        # Inicializamos el repositorio de la base de datos relacional SQLite
+        self.db = SQLiteRepository()
 
     # --- CRUD Libros ---
-    def agregar_libro(self, libro: Libro) -> None:
+    def agregar_libro(self, libro: Union[LibroFisico, LibroDigital]) -> None:
+        """Agrega un libro al catálogo y a la Base de Datos SQL."""
+        if any(l.isbn == libro.isbn for l in self.libros):
+            raise ValueError(f"El libro con ISBN {libro.isbn} ya existe.")
         self.libros.append(libro)
+
+        # NUEVO: Guardar en la base de datos SQLite
+        self.db.insertar_libro(libro)
 
     def eliminar_libro(self, isbn: str) -> bool:
         # Buscamos el libro y lo eliminamos

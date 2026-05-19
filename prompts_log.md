@@ -32,3 +32,13 @@
 **Código adoptado o modificado:** Creé la carpeta `events/` con `dispatcher.py`. Modifiqué la GUI para suscribir el método de actualizar la tabla al evento personalizado, de modo que cuando se guarda un libro o alumno, se emite el evento y la tabla se refresca sola.
 **Lo que aprendí / Lo que la IA no entendió:** Aprendí la tremenda diferencia entre eventos de hardware (clics, teclas presionadas) que maneja Tkinter nativamente mediante el método `.bind()`, y los eventos de "Dominio" o de "Negocio" que uno mismo debe crear con un Dispatcher para comunicar ventanas distintas sin que se conozcan directamente (desacoplamiento).
 **Temas de la materia que aplica este prompt:** Programación Orientada a Eventos, Patrón Observador (Callbacks/Delegados), Funciones Lambda, Ciclo de vida de GUI.
+
+### Prompt #4 (Fase 2: Base de Datos Relacional SQLite)
+**Tarea:** Tarea 4.1 Base de datos relacional (SQL).
+**LLM usada:** Gemini
+**Fecha/Hora:** 2026-05-18 20:45
+**Prompt enviado:** Necesito modelar en SQL el Sistema de Gestión de Biblioteca Digital con tablas para libros, y conectarlo a la GUI en Python usando operaciones CRUD seguras.
+**Respuesta recibida (resumen):** La IA generó un nuevo archivo `sqlite_repo.py` aplicando el patrón Repositorio. Proporcionó sentencias DDL (`CREATE TABLE IF NOT EXISTS`) y operaciones de inserción usando "consultas parametrizadas" (con los símbolos `?`) para prevenir vulnerabilidades de Inyección SQL.
+**Código adoptado o modificado:** Agregué `sqlite_repo.py` a la carpeta `repositories`. En `catalogo.py`, importé `SQLiteRepository` y el módulo `typing`. Modifiqué el constructor `__init__` para iniciar la BD, y agregué la instrucción `self.db.insertar_libro(libro)` en el método `agregar_libro` para guardar simultáneamente en memoria y en SQL.
+**Lo que aprendí / Lo que la IA no entendió:** Aprendí cómo la "Inyección SQL" es un riesgo de seguridad grave cuando se concatenan strings directamente en la consulta, y cómo los parámetros posicionales (`?`) lo evitan. También comprendí que SQLite genera archivos binarios (`.db`) que no se leen como texto plano.
+**Temas de la materia que aplica este prompt:** Bases de Datos Relacionales (SQL), Patrón Repositorio, Consultas Parametrizadas (Seguridad), CRUD.
