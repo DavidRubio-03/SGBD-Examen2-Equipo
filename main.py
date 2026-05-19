@@ -4,6 +4,8 @@ main.py - Punto de entrada principal (Arquitectura MVC y Event-Driven)
 import tkinter as tk
 from ui.main_window import BibliotecaGUI
 
+from repositories.mongo_repo import MongoRepository
+from events.dispatcher import sistema_eventos
 from modelos.libro import LibroFisico, LibroDigital
 from modelos.usuario import Alumno, Profesor, Administrador
 from servicios.catalogo import Catalogo
@@ -34,8 +36,19 @@ def main():
     print("Iniciando SGBD - Arquitectura Orientada a Eventos...")
     root = tk.Tk()
     
-    # En las siguientes tareas, aquí instanciaremos los Controladores (Capa Controllers)
-    # y los inyectaremos en la UI para cumplir el patrón MVC estricto.
+    # 1. Iniciamos la conexión a MongoDB (Capa de Repositorio)
+    logger_mongo = MongoRepository()
+    
+    # 2. Creamos un método anónimo/delegado para traducir el evento a Mongo
+    def callback_auditoria(datos):
+        # Cuando el evento se dispara, lo guardamos en la base de datos NoSQL
+        logger_mongo.registrar_evento(
+            tipo_evento="SISTEMA_GUI", 
+            descripcion=str(datos)
+        )
+        
+    # 3. Suscribimos MongoDB a nuestro Gestor de Eventos
+    sistema_eventos.suscribir("ACTUALIZAR_VISTA", callback_auditoria)
     
     # Arrancamos la interfaz gráfica del sistema
     app = BibliotecaGUI(root)

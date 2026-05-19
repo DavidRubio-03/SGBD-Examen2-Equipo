@@ -39,19 +39,19 @@
     ],
     "usuarios": [
         {
-            "id": "f63ff9a4-0726-48f0-9c08-51fd6e570c53",
+            "id": "825d454f-69b6-4c04-9845-d1865c4a3144",
             "rol": "Alumno",
             "nombre": "Juan David",
             "email": "david@email.com"
         },
         {
-            "id": "6080ae59-7643-4373-a1a2-d2e3782c4f5e",
+            "id": "5869a81c-c4e0-4dcb-b255-b5988fbcd6e9",
             "rol": "Alumno",
             "nombre": "Oscar Guadalupe",
             "email": "oscar@email.com"
         },
         {
-            "id": "0c5f61f1-5ec1-4177-890a-df4a14d379c1",
+            "id": "927a09c7-6247-406e-a634-2077f77b962c",
             "rol": "Alumno",
             "nombre": "Nico Robin",
             "email": "robin@email.com"

@@ -42,3 +42,13 @@
 **Código adoptado o modificado:** Agregué `sqlite_repo.py` a la carpeta `repositories`. En `catalogo.py`, importé `SQLiteRepository` y el módulo `typing`. Modifiqué el constructor `__init__` para iniciar la BD, y agregué la instrucción `self.db.insertar_libro(libro)` en el método `agregar_libro` para guardar simultáneamente en memoria y en SQL.
 **Lo que aprendí / Lo que la IA no entendió:** Aprendí cómo la "Inyección SQL" es un riesgo de seguridad grave cuando se concatenan strings directamente en la consulta, y cómo los parámetros posicionales (`?`) lo evitan. También comprendí que SQLite genera archivos binarios (`.db`) que no se leen como texto plano.
 **Temas de la materia que aplica este prompt:** Bases de Datos Relacionales (SQL), Patrón Repositorio, Consultas Parametrizadas (Seguridad), CRUD.
+
+### Prompt #5 (Fase 2: Base de Datos No Relacional - MongoDB)
+**Tarea:** Tarea 4.2 Base de datos no relacional (Mongo).
+**LLM usada:** Gemini
+**Fecha/Hora:** 2026-05-18 20:55
+**Prompt enviado:** Ayúdame a decidir qué información de una biblioteca digital conviene guardar en SQL y cuál en Mongo. Quiero una propuesta híbrida, código con pymongo y que el programa no explote si el servidor de Mongo está apagado.
+**Respuesta recibida (resumen):** La IA sugirió una arquitectura híbrida: SQL para datos transaccionales (Libros/Préstamos) y Mongo para la Bitácora de Eventos (por su flexibilidad sin esquemas). Generó `mongo_repo.py` con `MongoClient` envuelto en un `try/except` con un `serverSelectionTimeoutMS=2000` para programación defensiva.
+**Código adoptado o modificado:** Agregué `mongo_repo.py` en la capa de Repositorios. En `main.py`, instancié el repositorio y lo conecté al `sistema_eventos` usando un delegado (callback) para que registre silenciosamente cualquier acción bajo el evento "ACTUALIZAR_VISTA".
+**Lo que aprendí / Lo que la IA no entendió:** Aprendí la diferencia de paradigmas: SQL requiere `CREATE TABLE` estricto, mientras que Mongo permite insertar diccionarios (JSON) directamente (`insert_one`). También aprendí qué es la "Degradación Elegante" usando bloques `try/except` en conexiones a red.
+**Temas de la materia que aplica este prompt:** Bases de Datos No Relacionales (NoSQL), Arquitectura Híbrida, Programación Defensiva (Manejo de Excepciones), Callbacks.
