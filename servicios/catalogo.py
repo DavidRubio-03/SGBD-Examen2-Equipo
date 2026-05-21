@@ -6,6 +6,7 @@ import os
 from typing import Protocol
 from datetime import datetime
 
+import xml.etree.ElementTree as ET
 from typing import Union, List, Dict
 from repositories.sqlite_repo import SQLiteRepository
 from modelos.libro import Libro, LibroDigital, LibroFisico
@@ -233,6 +234,25 @@ class Catalogo:
                     print(f"Omitiendo préstamo por error en datos: {e}")
                     
             print(f"✅ ¡Datos cargados exitosamente desde {ruta}!")
+
+    def exportar_xml(self, ruta: str) -> None:
+        """Exporta el catálogo actual a un archivo XML (Tarea 4.3)."""
+        root = ET.Element("biblioteca")
+        libros_xml = ET.SubElement(root, "libros")
+
+        for libro in self.libros:
+            libro_xml = ET.SubElement(libros_xml, "libro")
+            ET.SubElement(libro_xml, "isbn").text = str(libro.isbn)
+            ET.SubElement(libro_xml, "titulo").text = libro.titulo
+            ET.SubElement(libro_xml, "autor").text = libro.autor
+            # Diferenciamos si es físico o digital
+            tipo = "Fisico" if hasattr(libro, '_num_ejemplares') else "Digital"
+            ET.SubElement(libro_xml, "tipo").text = tipo
+
+        # Escribimos el árbol XML en el archivo
+        tree = ET.ElementTree(root)
+        tree.write(ruta, encoding="utf-8", xml_declaration=True)
+        print(f"✅ Respaldo XML generado exitosamente en {ruta}")
 
 # Pruebas rápidas
 if __name__ == "__main__":

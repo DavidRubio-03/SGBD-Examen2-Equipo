@@ -6,6 +6,9 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 from datetime import datetime
 
+import matplotlib.pyplot as plt
+from threads.workers import WorkerReporte, WorkerGraficas
+from tkinter import messagebox, ttk, filedialog
 from servicios.catalogo import Catalogo
 from servicios.gestor_cola import ColaEspera
 from modelos.libro import LibroFisico
@@ -92,6 +95,26 @@ class BibliotecaGUI:
             # MÉTODO ANÓNIMO (lambda) 3: Pasamos el evento y el widget
             btn.bind("<Enter>", lambda e, b=btn: b.config(bg="#1abc9c")) # Ratón entra
             btn.bind("<Leave>", lambda e, b=btn: b.config(bg="#34495e")) # Ratón sale
+
+    # --- NUEVO MENÚ DE RESPALDOS (TAREA 4.3) ---
+        mb_archivos = tk.Menubutton(frame_menu, text="💾 Respaldos ▼", bg="#8e44ad", fg="white", relief=tk.FLAT, padx=10, pady=5, font=("Arial", 9, "bold"))
+        mb_archivos.pack(side=tk.LEFT, padx=5)
+        mb_archivos.menu = tk.Menu(mb_archivos, tearoff=0)
+        mb_archivos["menu"] = mb_archivos.menu
+        mb_archivos.menu.add_command(label="Exportar Catálogo a XML", command=self.exportar_xml_gui)
+        mb_archivos.menu.add_command(label="Exportar Catálogo a JSON", command=self.exportar_json_gui)
+        
+        botones.append(mb_archivos) # Para que también tenga el efecto hover del mouse
+
+    # --- NUEVO BOTÓN MULTIHILO (TAREA 3.6) ---
+        b_hilo = tk.Button(frame_menu, text="⚙️ Análisis Profundo", command=self.ejecutar_reporte_hilo, bg="#e67e22", fg="white", relief=tk.FLAT, padx=10, pady=5, font=("Arial", 9, "bold"))
+        b_hilo.pack(side=tk.LEFT, padx=5)
+        botones.append(b_hilo)
+
+    # --- NUEVO BOTÓN PARA GRÁFICAS (TAREA 4.5) ---
+        b_graf = tk.Button(frame_menu, text="📊 Ver Estadísticas", command=self.ejecutar_graficas_hilo, bg="#2980b9", fg="white", relief=tk.FLAT, padx=10, pady=5, font=("Arial", 9, "bold"))
+        b_graf.pack(side=tk.LEFT, padx=5)
+        botones.append(b_graf)
 
         tk.Label(self.root, text="Panel de Control General", font=("Arial", 18, "bold")).pack(pady=10)
         
@@ -245,6 +268,96 @@ class BibliotecaGUI:
         for p in self.biblioteca.prestamos:
             estado = "Activo" if p.activo else f"Devuelto (Multa: ${p._multa})"
             tree.insert("", tk.END, values=(p.usuario.email, p.libro.isbn, p.fecha_prestamo.strftime('%Y-%m-%d'), estado))
+
+    def exportar_xml_gui(self):
+        """Abre un cuadro de diálogo para guardar el respaldo en XML."""
+        ruta = filedialog.asksaveasfilename(defaultextension=".xml", filetypes=[("Archivos XML", "*.xml")], initialfile="respaldo_biblioteca.xml")
+        if ruta:
+            try:
+                self.biblioteca.exportar_xml(ruta)
+                messagebox.showinfo("Éxito", f"Respaldo XML guardado en:\n{ruta}")
+                sistema_eventos.emitir("ACTUALIZAR_VISTA", "Respaldo XML generado por el usuario")
+            except Exception as e:
+                messagebox.showerror("Error", f"No se pudo guardar el XML: {e}")
+
+    def exportar_json_gui(self):
+        """Abre un cuadro de diálogo para guardar el respaldo en JSON."""
+        ruta = filedialog.asksaveasfilename(defaultextension=".json", filetypes=[("Archivos JSON", "*.json")], initialfile="respaldo_biblioteca.json")
+        if ruta:
+            try:
+                self.biblioteca.guardar_json(ruta)
+                messagebox.showinfo("Éxito", f"Respaldo JSON guardado en:\n{ruta}")
+                sistema_eventos.emitir("ACTUALIZAR_VISTA", "Respaldo JSON generado por el usuario")
+            except Exception as e:
+                messagebox.showerror("Error", f"No se pudo guardar el JSON: {e}")
+
+    # --- MÉTODOS PARA MULTIHILO (TAREA 3.6) ---
+    def ejecutar_reporte_hilo(self):
+        """Dispara el hilo de procesamiento sin congelar la ventana."""
+        # Cambiamos el texto de la pantalla para avisar que estamos trabajando
+        self.txt_reporte.config(state=tk.NORMAL)
+        self.txt_reporte.delete("1.0", tk.END)
+        self.txt_reporte.insert(tk.END, "⏳ Ejecutando análisis profundo en segundo plano...\nPor favor espere 3 segundos (Puede seguir usando la app).")
+        self.txt_reporte.config(state=tk.DISABLED)
+
+        # Instanciamos y arrancamos el Obrero (Worker)
+        worker = WorkerReporte(self.biblioteca, self.actualizar_ui_desde_hilo)
+        worker.start() # start() ejecuta el def run() en otro hilo paralelo
+
+    def actualizar_ui_desde_hilo(self, resultado):
+        """Recibe los datos del hilo. Se usa root.after para proteger Tkinter."""
+        # Tkinter no permite que un hilo secundario modifique la pantalla directamente.
+        # root.after(0, func) obliga al hilo principal de Tkinter a dibujar el resultado.
+        self.root.after(0, lambda: self.mostrar_resultado_hilo(resultado))
+
+    def mostrar_resultado_hilo(self, resultado):
+        """Dibuja finalmente el resultado en la caja de texto."""
+        self.txt_reporte.config(state=tk.NORMAL)
+        self.txt_reporte.delete("1.0", tk.END)
+        self.txt_reporte.insert(tk.END, resultado)
+        self.txt_reporte.config(state=tk.DISABLED)
+        messagebox.showinfo("Análisis Terminado", "El hilo secundario terminó su trabajo.")
+
+    def ejecutar_graficas_hilo(self):
+        """Dispara el hilo para procesar los datos matemáticos sin congelar la GUI."""
+        self.txt_reporte.config(state=tk.NORMAL)
+        self.txt_reporte.delete("1.0", tk.END)
+        self.txt_reporte.insert(tk.END, "📊 Procesando datos para las gráficas en segundo plano...\nPor favor espere 2 segundos.")
+        self.txt_reporte.config(state=tk.DISABLED)
+        
+        # Arranca el worker 2
+        worker_graf = WorkerGraficas(self.biblioteca, self.actualizar_graficas_desde_hilo)
+        worker_graf.start()
+
+    def actualizar_graficas_desde_hilo(self, datos_procesados):
+        """Recibe el diccionario del hilo y obliga a Tkinter a dibujar en el hilo principal."""
+        self.root.after(0, lambda: self.mostrar_graficas(datos_procesados))
+
+    def mostrar_graficas(self, datos):
+        """Usa Matplotlib para renderizar 2 gráficas (Requisito Tarea 4.5)."""
+        self.txt_reporte.config(state=tk.NORMAL)
+        self.txt_reporte.insert(tk.END, "\n✅ Gráficas generadas con éxito en una nueva ventana.")
+        self.txt_reporte.config(state=tk.DISABLED)
+
+        # Preparamos los datos
+        etiquetas = list(datos.keys()) # ['Físicos', 'Digitales']
+        valores = list(datos.values()) # [Ej: 3, 2]
+
+        # Creamos una figura con 1 fila y 2 columnas (2 Gráficas)
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
+        fig.suptitle('Estadísticas del Catálogo de la Biblioteca', fontsize=14, fontweight='bold')
+
+        # Gráfica 1: Gráfico de Pastel (Distribución)
+        ax1.pie(valores, labels=etiquetas, autopct='%1.1f%%', startangle=90, colors=['#3498db', '#2ecc71'], shadow=True)
+        ax1.set_title('Distribución por Formato')
+
+        # Gráfica 2: Gráfico de Barras (Cantidades absolutas)
+        ax2.bar(etiquetas, valores, color=['#3498db', '#2ecc71'])
+        ax2.set_title('Cantidad Absoluta de Libros')
+        ax2.set_ylabel('Número de títulos')
+
+        plt.tight_layout()
+        plt.show() # Muestra la ventana interactiva de Matplotlib
 
     def salir(self):
         self.biblioteca.guardar_json("data/biblioteca.json")
