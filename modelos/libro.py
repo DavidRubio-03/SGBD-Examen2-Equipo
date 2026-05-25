@@ -82,19 +82,43 @@ class Libro:
             "isbn": self._isbn,
             "anio": self._anio,
             "genero": self._genero,
-            "disponible": self._disponible
+            "disponible": self._disponible,
+            "tipo": "Libro"
         }
 
     @classmethod
     def from_dict(cls, data: dict) -> 'Libro':
         """Crea un objeto Libro nuevo a partir de un diccionario."""
-        libro = cls(
-            titulo=data['titulo'],
-            autor=data['autor'],
-            isbn=data['isbn'],
-            anio=data['anio'],
-            genero=data['genero']
-        )
+        tipo = data.get('tipo', '').strip().lower().replace('í', 'i')
+        if tipo == 'fisico' or 'ejemplares' in data:
+            libro = LibroFisico(
+                data['titulo'],
+                data['autor'],
+                data['isbn'],
+                int(data['anio']),
+                data['genero'],
+                data.get('ubicacion', 'General'),
+                int(data.get('ejemplares', 1))
+            )
+        elif tipo == 'digital' or 'formato' in data:
+            libro = LibroDigital(
+                data['titulo'],
+                data['autor'],
+                data['isbn'],
+                int(data['anio']),
+                data['genero'],
+                data.get('formato', 'PDF'),
+                float(data.get('tamano_mb', 1.0)),
+                data.get('url_descarga', 'http://example.com')
+            )
+        else:
+            libro = cls(
+                titulo=data['titulo'],
+                autor=data['autor'],
+                isbn=data['isbn'],
+                anio=int(data['anio']),
+                genero=data['genero']
+            )
         libro._disponible = data.get('disponible', True)
         return libro
 
@@ -148,6 +172,28 @@ class LibroDigital(Libro):
             raise ValueError("URL de descarga no válida.")
         self._url_descarga = url_descarga
 
+    @property
+    def formato(self) -> str:
+        return self._formato
+
+    @property
+    def tamano_mb(self) -> float:
+        return self._tamano_mb
+
+    @property
+    def url_descarga(self) -> str:
+        return self._url_descarga
+
+    def to_dict(self) -> dict:
+        data = super().to_dict()
+        data.update({
+            "tipo": "Digital",
+            "formato": self._formato,
+            "tamano_mb": self._tamano_mb,
+            "url_descarga": self._url_descarga
+        })
+        return data
+
     # Sobreescribimos el método __str__ para dar un formato específico
     def __str__(self) -> str:
         return f"{super().__str__()} [Digital: {self._formato}]"
@@ -165,6 +211,15 @@ class LibroFisico(Libro):
         if num_ejemplares < 1:
             raise ValueError("Debe haber al menos 1 ejemplar.")
         self._num_ejemplares = num_ejemplares
+
+    def to_dict(self) -> dict:
+        data = super().to_dict()
+        data.update({
+            "tipo": "Fisico",
+            "ubicacion": self._ubicacion,
+            "ejemplares": self._num_ejemplares
+        })
+        return data
 
     def __str__(self) -> str:
         return f"{super().__str__()} [Físico: {self._num_ejemplares} ejemplares en {self._ubicacion}]"

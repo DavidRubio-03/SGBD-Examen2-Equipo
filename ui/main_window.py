@@ -6,21 +6,21 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 from datetime import datetime
 
+from modelos.libro import LibroFisico, LibroDigital
 import matplotlib.pyplot as plt
 from threads.workers import WorkerReporte, WorkerGraficas
 from tkinter import messagebox, ttk, filedialog
 from servicios.catalogo import Catalogo
 from servicios.gestor_cola import ColaEspera
-from modelos.libro import LibroFisico
-from modelos.usuario import Alumno
+from modelos.usuario import Alumno, Profesor, Administrador
 from events.dispatcher import sistema_eventos # Importamos nuestro gestor de eventos
 
 class BibliotecaGUI:
-    def __init__(self, root):
+    def __init__(self, root, catalogo=None):
         self.root = root
         self.root.title("SGBD - Sistema de Gestión de Biblioteca Digital")
         self.root.geometry("900x700")
-        self.root.minsize(900, 700) 
+        self.root.minsize(900, 700)
         
         # EVENTO 1: Destrucción de GUI (Cierre seguro)
         self.root.protocol("WM_DELETE_WINDOW", self.salir)
@@ -28,14 +28,17 @@ class BibliotecaGUI:
         # EVENTO 2: Carga de GUI (<Map> se dispara cuando la ventana aparece en pantalla)
         self.root.bind("<Map>", self.evento_carga_inicial)
 
-        self.biblioteca = Catalogo()
+        self.biblioteca = catalogo if catalogo is not None else Catalogo()
         self.cola = ColaEspera()
         self.cargado = False # Bandera para evitar disparar el evento de carga múltiples veces
         
-        try:
-            self.biblioteca.cargar_json("data/biblioteca.json")
-        except Exception as e:
-            print(f"Iniciando catálogo: {e}")
+        if catalogo is None:
+            try:
+                self.biblioteca.cargar_json("data/biblioteca.json")
+            except Exception as e:
+                print(f"Iniciando catálogo: {e}")
+        else:
+            print("Catálogo inyectado desde main.")
 
         # EVENTO 3: Delegado/Callback (Suscribimos una función a nuestro evento personalizado)
         sistema_eventos.suscribir("ACTUALIZAR_VISTA", self.callback_actualizar_vista)
@@ -73,10 +76,20 @@ class BibliotecaGUI:
         b2 = tk.Button(frame_menu, text="🔍 Consultar Libro", command=lambda: self.ventana_buscar_libro(), **btn_style)
         b2.pack(side=tk.LEFT, padx=5)
         
-        b3 = tk.Button(frame_menu, text="➕ Agregar Libro", command=self.ventana_agregar_libro, **btn_style)
-        b3.pack(side=tk.LEFT, padx=5)
-        b4 = tk.Button(frame_menu, text="👤 Registrar Alumno", command=self.ventana_registrar_alumno, **btn_style)
-        b4.pack(side=tk.LEFT, padx=5)
+        mb_libros = tk.Menubutton(frame_menu, text="📕 Agregar Libro ▼", bg="#16a085", fg="white", relief=tk.FLAT, padx=10, pady=5, font=("Arial", 9, "bold"))
+        mb_libros.pack(side=tk.LEFT, padx=5)
+        mb_libros.menu = tk.Menu(mb_libros, tearoff=0)
+        mb_libros["menu"] = mb_libros.menu
+        mb_libros.menu.add_command(label="Libro Físico", command=self.ventana_agregar_libro)
+        mb_libros.menu.add_command(label="Libro Digital", command=self.ventana_agregar_libro_digital)
+
+        mb_usuarios = tk.Menubutton(frame_menu, text="👤 Registrar Usuario ▼", bg="#27ae60", fg="white", relief=tk.FLAT, padx=10, pady=5, font=("Arial", 9, "bold"))
+        mb_usuarios.pack(side=tk.LEFT, padx=5)
+        mb_usuarios.menu = tk.Menu(mb_usuarios, tearoff=0)
+        mb_usuarios["menu"] = mb_usuarios.menu
+        mb_usuarios.menu.add_command(label="Alumno", command=self.ventana_registrar_alumno)
+        mb_usuarios.menu.add_command(label="Profesor", command=self.ventana_registrar_profesor)
+        mb_usuarios.menu.add_command(label="Administrador", command=self.ventana_registrar_administrador)
         
         mb_prestamo = tk.Menubutton(frame_menu, text="📋 Gestión de Préstamos ▼", bg="#2980b9", fg="white", relief=tk.FLAT, padx=10, pady=5, font=("Arial", 9, "bold"))
         mb_prestamo.pack(side=tk.LEFT, padx=5)
@@ -90,7 +103,7 @@ class BibliotecaGUI:
         b5.pack(side=tk.LEFT, padx=5)
 
         # EVENTO 5: Mouse (Hover effects para todos los botones principales)
-        botones = [b1, b2, b3, b4, b5]
+        botones = [b1, b2, mb_libros, mb_usuarios, b5]
         for btn in botones:
             # MÉTODO ANÓNIMO (lambda) 3: Pasamos el evento y el widget
             btn.bind("<Enter>", lambda e, b=btn: b.config(bg="#1abc9c")) # Ratón entra
@@ -217,6 +230,47 @@ class BibliotecaGUI:
                 
         tk.Button(v, text="Confirmar Registro", bg="#27ae60", fg="white", font=("Arial", 10, "bold"), command=guardar, pady=10, padx=30).pack(pady=20)
 
+    def ventana_agregar_libro_digital(self):
+        v = tk.Toplevel(self.root)
+        v.title("Formulario: Nuevo Libro Digital")
+        v.geometry("500x650")
+        tk.Label(v, text="REGISTRO DE LIBRO DIGITAL", font=("Arial", 14, "bold")).pack(pady=10)
+
+        fields = [("Título:", "tit"), ("Autor:", "aut"), ("ISBN-13:", "isbn"), 
+                  ("Año:", "anio"), ("Género:", "gen"), 
+                  ("Formato (PDF/EPUB/MOBI):", "fmt"), ("Tamaño (MB):", "mb"), ("URL Descarga:", "url")]
+        entries = {}
+
+        for text, key in fields:
+            tk.Label(v, text=text, font=("Arial", 10)).pack(pady=2)
+            e = tk.Entry(v, width=40)
+            # Valores por defecto para guiar al usuario
+            if key == "anio": e.insert(0, str(datetime.now().year))
+            if key == "fmt": e.insert(0, "PDF")
+            if key == "mb": e.insert(0, "1.5")
+            if key == "url": e.insert(0, "https://")
+
+            e.pack(pady=5)
+            e.bind('<FocusIn>', self.on_focus_in)
+            e.bind('<FocusOut>', self.on_focus_out)
+            entries[key] = e
+
+        def guardar():
+            try:
+                # Aquí se dispararán los bloqueos 'raise ValueError' si el formato o MB son incorrectos
+                nuevo = LibroDigital(
+                    entries["tit"].get(), entries["aut"].get(), entries["isbn"].get(), 
+                    int(entries["anio"].get()), entries["gen"].get(),
+                    entries["fmt"].get(), float(entries["mb"].get()), entries["url"].get()
+                )
+                self.biblioteca.agregar_libro(nuevo)
+                messagebox.showinfo("Éxito", "Libro Digital registrado con éxito.")
+                v.destroy()
+                sistema_eventos.emitir("ACTUALIZAR_VISTA", "Nuevo libro digital agregado")
+            except Exception as e:
+                messagebox.showerror("Error de Validación", str(e))
+
+        tk.Button(v, text="Confirmar Registro", bg="#27ae60", fg="white", font=("Arial", 10, "bold"), command=guardar, pady=10, padx=30).pack(pady=20)
     # ... (Se mantienen las funciones de registrar_alumno, prestamo, devolucion sin cambios mayores por ahora)
     # Por brevedad en esta respuesta, el resto de métodos (ventana_registrar_alumno, ventana_prestamo, etc.) 
     # quedan igual que en tu versión anterior. Solo asegúrate de copiar este inicio y reemplazar las primeras funciones.
@@ -239,11 +293,119 @@ class BibliotecaGUI:
                 messagebox.showerror("Error", str(e))
         tk.Button(v, text="Registrar Alumno", command=guardar, bg="#27ae60", fg="white").pack(pady=20)
 
+    def ventana_registrar_profesor(self):
+        v = tk.Toplevel(self.root); v.title("Nuevo Profesor"); v.geometry("500x450")
+        tk.Label(v, text="Nombre Completo:").pack(); e_nom = tk.Entry(v, width=40); e_nom.pack(pady=5)
+        tk.Label(v, text="Email Institucional:").pack(); e_mail = tk.Entry(v, width=40); e_mail.pack(pady=5)
+        tk.Label(v, text="Departamento:").pack(); e_dep = tk.Entry(v, width=40); e_dep.pack(pady=5)
+        
+        def guardar():
+            try:
+                profesor = Profesor(e_nom.get(), e_mail.get(), e_dep.get())
+                self.biblioteca.registrar_usuario(profesor)
+                messagebox.showinfo("Éxito", "Profesor registrado.")
+                v.destroy()
+                sistema_eventos.emitir("ACTUALIZAR_VISTA", "Nuevo profesor registrado")
+            except Exception as e:
+                messagebox.showerror("Error", str(e))
+        tk.Button(v, text="Registrar Profesor", command=guardar, bg="#27ae60", fg="white").pack(pady=20)
+
+    def ventana_registrar_administrador(self):
+        v = tk.Toplevel(self.root); v.title("Nuevo Administrador"); v.geometry("500x450")
+        tk.Label(v, text="Nombre Completo:").pack(); e_nom = tk.Entry(v, width=40); e_nom.pack(pady=5)
+        tk.Label(v, text="Email Institucional:").pack(); e_mail = tk.Entry(v, width=40); e_mail.pack(pady=5)
+        tk.Label(v, text="Nivel de Acceso (1-5):").pack(); e_nivel = tk.Entry(v, width=40); e_nivel.insert(0, "1"); e_nivel.pack(pady=5)
+        
+        def guardar():
+            try:
+                administrador = Administrador(e_nom.get(), e_mail.get(), int(e_nivel.get()))
+                self.biblioteca.registrar_usuario(administrador)
+                messagebox.showinfo("Éxito", "Administrador registrado.")
+                v.destroy()
+                sistema_eventos.emitir("ACTUALIZAR_VISTA", "Nuevo administrador registrado")
+            except Exception as e:
+                messagebox.showerror("Error", str(e))
+        tk.Button(v, text="Registrar Administrador", command=guardar, bg="#27ae60", fg="white").pack(pady=20)
+
     def ventana_prestamo(self):
-        pass # Mantén tu código de préstamo original aquí, solo añade al final: sistema_eventos.emitir("ACTUALIZAR_VISTA", "Préstamo realizado")
+        """Abre el formulario para registrar un préstamo."""
+        v = tk.Toplevel(self.root)
+        v.title("Realizar Préstamo")
+        v.geometry("400x300")
+        tk.Label(v, text="REGISTRAR PRÉSTAMO", font=("Arial", 12, "bold")).pack(pady=15)
+
+        tk.Label(v, text="Email del Usuario:").pack()
+        e_email = tk.Entry(v, width=40)
+        e_email.pack(pady=5)
+        e_email.bind('<FocusIn>', self.on_focus_in)
+        e_email.bind('<FocusOut>', self.on_focus_out)
+
+        tk.Label(v, text="ISBN del Libro a prestar:").pack()
+        e_isbn = tk.Entry(v, width=40)
+        e_isbn.pack(pady=5)
+        e_isbn.bind('<FocusIn>', self.on_focus_in)
+        e_isbn.bind('<FocusOut>', self.on_focus_out)
+
+        def procesar():
+            email = e_email.get().strip()
+            isbn = e_isbn.get().strip()
+            try:
+                self.biblioteca.registrar_prestamo(email, isbn)
+                messagebox.showinfo("Éxito", "✅ Préstamo realizado con éxito.")
+                v.destroy()
+                sistema_eventos.emitir("ACTUALIZAR_VISTA", "Préstamo realizado")
+            except ValueError as e:
+                # Si falla (ej. libro sin stock), preguntamos si quiere ir a la cola de espera
+                respuesta = messagebox.askyesno("Atención", f"{e}\n\n¿Deseas entrar a la cola de espera?")
+                if respuesta:
+                    self.cola.encolar_solicitud(email, isbn)
+                    messagebox.showinfo("Cola de Espera", "✅ Añadido a la cola correctamente.")
+                    v.destroy()
+            except Exception as e:
+                messagebox.showerror("Error", str(e))
+
+        tk.Button(v, text="Confirmar Préstamo", command=procesar, bg="#3498db", fg="white", font=("Arial", 10, "bold"), pady=8, padx=20).pack(pady=20)
 
     def ventana_devolucion(self):
-        pass # Mantén tu código original aquí, añade: sistema_eventos.emitir("ACTUALIZAR_VISTA", "Devolución procesada")
+        """Abre el formulario para registrar una devolución."""
+        v = tk.Toplevel(self.root)
+        v.title("Devolver Libro")
+        v.geometry("400x300")
+        tk.Label(v, text="DEVOLVER LIBRO", font=("Arial", 12, "bold")).pack(pady=15)
+
+        tk.Label(v, text="Email del Usuario:").pack()
+        e_email = tk.Entry(v, width=40)
+        e_email.pack(pady=5)
+        e_email.bind('<FocusIn>', self.on_focus_in)
+        e_email.bind('<FocusOut>', self.on_focus_out)
+
+        tk.Label(v, text="ISBN del Libro a devolver:").pack()
+        e_isbn = tk.Entry(v, width=40)
+        e_isbn.pack(pady=5)
+        e_isbn.bind('<FocusIn>', self.on_focus_in)
+        e_isbn.bind('<FocusOut>', self.on_focus_out)
+
+        def procesar():
+            try:
+                # Procesa la devolución y obtiene la multa si aplica
+                multa = self.biblioteca.procesar_devolucion(e_email.get().strip(), e_isbn.get().strip())
+                mensaje = "✅ Devolución procesada."
+                if multa > 0:
+                    mensaje += f"\n\n⚠️ Atención: Multa a pagar de ${multa}"
+                
+                messagebox.showinfo("Devolución Exitosa", mensaje)
+                
+                # --- Revisamos la cola de espera ---
+                siguiente = self.cola.atender_siguiente()
+                if siguiente:
+                    messagebox.showinfo("🔔 Aviso de Fila", f"El usuario {siguiente[0]} ya puede pasar por el libro ISBN: {siguiente[1]}")
+                
+                v.destroy()
+                sistema_eventos.emitir("ACTUALIZAR_VISTA", "Devolución procesada")
+            except Exception as e:
+                messagebox.showerror("Error", str(e))
+
+        tk.Button(v, text="Confirmar Devolución", command=procesar, bg="#e74c3c", fg="white", font=("Arial", 10, "bold"), pady=8, padx=20).pack(pady=20)
 
     def ventana_cola_espera(self):
         v = tk.Toplevel(self.root); v.title("Espera"); v.geometry("500x400")

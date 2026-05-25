@@ -35,6 +35,15 @@ def seed_data(catalogo: Catalogo):
 def main():
     print("Iniciando SGBD - Arquitectura Orientada a Eventos...")
     root = tk.Tk()
+
+    catalogo = Catalogo()
+    try:
+        catalogo.cargar_json("data/biblioteca.json")
+    except FileNotFoundError:
+        seed_data(catalogo)
+    except Exception as e:
+        print(f"No se pudo cargar JSON: {e}")
+        seed_data(catalogo)
     
     # 1. Iniciamos la conexión a MongoDB (Capa de Repositorio)
     logger_mongo = MongoRepository()
@@ -50,8 +59,8 @@ def main():
     # 3. Suscribimos MongoDB a nuestro Gestor de Eventos
     sistema_eventos.suscribir("ACTUALIZAR_VISTA", callback_auditoria)
     
-    # Arrancamos la interfaz gráfica del sistema
-    app = BibliotecaGUI(root)
+    # Arrancamos la interfaz gráfica del sistema con un catálogo ya cargado
+    app = BibliotecaGUI(root, catalogo)
     root.mainloop()
 
 if __name__ == "__main__":

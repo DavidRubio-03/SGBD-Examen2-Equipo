@@ -67,6 +67,7 @@ class Catalogo:
     def registrar_usuario(self, usuario: Usuario) -> None:
         # Guardamos al usuario en el diccionario usando su email como llave
         self.usuarios[usuario.email] = usuario
+        self.db.insertar_usuario(usuario)
 
     # --- Préstamos y Devoluciones ---
     def registrar_prestamo(self, email_usuario: str, isbn_libro: str) -> bool:
@@ -94,6 +95,8 @@ class Catalogo:
         # Si pasa todas las validaciones, creamos el préstamo
         nuevo_prestamo = Prestamo(usuario, libro)
         self.prestamos.append(nuevo_prestamo)
+        self.db.insertar_prestamo(nuevo_prestamo)
+        self.db.insertar_libro(libro)
         return True
 
         # Añadimos email_usuario como parámetro obligatorio
@@ -111,6 +114,8 @@ class Catalogo:
                     multa = prestamo.usuario.calcular_multa(dias_retraso)
                 
                 prestamo.cerrar(multa)
+                self.db.actualizar_prestamo(prestamo)
+                self.db.insertar_libro(prestamo.libro)
                 return multa
                 
         raise ValueError("No se encontró un préstamo activo para ese usuario y ese ISBN.")
@@ -124,25 +129,11 @@ class Catalogo:
         import json
         
         datos = {
-            "libros": [],
+            "libros": [l.to_dict() for l in self.libros],
             "usuarios": [u.to_dict() for u in self.usuarios.values()],
             "prestamos": [p.to_dict() for p in self.prestamos]
         }
         
-        # EXTRACCIÓN MANUAL A PRUEBA DE BALAS PARA LOS LIBROS
-        for l in self.libros:
-            l_dict = {
-                "titulo": l.titulo,
-                "autor": l.autor,
-                "isbn": l.isbn,
-                "anio": getattr(l, '_anio', 2024),
-                "genero": getattr(l, '_genero', 'General'),
-                "disponible": l.disponible
-            }
-            if hasattr(l, '_num_ejemplares'):
-                l_dict['ejemplares'] = l._num_ejemplares
-            datos["libros"].append(l_dict)
-            
         os.makedirs(os.path.dirname(ruta), exist_ok=True)
         with open(ruta, 'w', encoding='utf-8') as f:
             json.dump(datos, f, indent=4)
@@ -172,32 +163,12 @@ class Catalogo:
             for lib_data in datos.get("libros", []):
                 try: # Si un libro está corrupto, que no rompa los demás
                     isbn_seguro = lib_data.get('isbn')
-                    if not isbn_seguro or len(isbn_seguro) < 13:
+                    if not isbn_seguro or len(isbn_seguro.replace('-', '').replace(' ', '')) < 13:
                         continue 
-                        
-                    if 'ejemplares' in lib_data: 
-                        # Pasamos los datos por posición estricta: Titulo, Autor, ISBN, Año, Genero, Ubicacion, Num_ejemplares
-                        nuevo_libro = LibroFisico(
-                            lib_data.get('titulo', 'Sin Titulo'), 
-                            lib_data.get('autor', 'Anonimo'),
-                            isbn_seguro, 
-                            int(lib_data.get('anio', 2024)),
-                            lib_data.get('genero', 'General'), 
-                            "General",
-                            int(lib_data.get('ejemplares', 1))
-                        )
-                    else: 
-                        # Lo mismo para el digital
-                        nuevo_libro = LibroDigital(
-                            lib_data.get('titulo', 'Sin Titulo'), 
-                            lib_data.get('autor', 'Anonimo'),
-                            isbn_seguro, 
-                            int(lib_data.get('anio', 2024)),
-                            lib_data.get('genero', 'General'), 
-                            "PDF", 1.0, "http://link.com"
-                        )
+                    nuevo_libro = Libro.from_dict(lib_data)
                     nuevo_libro._disponible = lib_data.get('disponible', True)
                     self.libros.append(nuevo_libro)
+                    self.db.insertar_libro(nuevo_libro)
                 except Exception as e:
                     print(f"Omitiendo libro por error en datos: {e}")
                 
@@ -211,6 +182,7 @@ class Catalogo:
                     else:
                         usuario = Alumno(usu_data.get("nombre",""), usu_data.get("email",""), "General", 1)
                     self.usuarios[usuario.email] = usuario
+                    self.db.insertar_usuario(usuario)
                 except Exception as e:
                     print(f"Omitiendo usuario por error en datos: {e}")
                 
@@ -230,13 +202,14 @@ class Catalogo:
                         prestamo._multa = float(p_data.get("multa", 0.0))
                         prestamo._activo = p_data.get("activo", True)
                         self.prestamos.append(prestamo)
+                        self.db.insertar_prestamo(prestamo)
                 except Exception as e:
                     print(f"Omitiendo préstamo por error en datos: {e}")
                     
             print(f"✅ ¡Datos cargados exitosamente desde {ruta}!")
 
     def exportar_xml(self, ruta: str) -> None:
-        """Exporta el catálogo actual a un archivo XML (Tarea 4.3)."""
+        """Exporta el catálogo a un archivo XML (Diferenciando Físicos y Digitales)."""
         root = ET.Element("biblioteca")
         libros_xml = ET.SubElement(root, "libros")
 
@@ -245,15 +218,24 @@ class Catalogo:
             ET.SubElement(libro_xml, "isbn").text = str(libro.isbn)
             ET.SubElement(libro_xml, "titulo").text = libro.titulo
             ET.SubElement(libro_xml, "autor").text = libro.autor
-            # Diferenciamos si es físico o digital
-            tipo = "Fisico" if hasattr(libro, '_num_ejemplares') else "Digital"
-            ET.SubElement(libro_xml, "tipo").text = tipo
+            
+            # Polimorfismo al exportar
+            if hasattr(libro, '_num_ejemplares'):
+                # Es Físico
+                ET.SubElement(libro_xml, "tipo").text = "Fisico"
+                ET.SubElement(libro_xml, "ubicacion").text = getattr(libro, '_ubicacion', 'N/A')
+                ET.SubElement(libro_xml, "ejemplares").text = str(getattr(libro, '_num_ejemplares', 0))
+            else:
+                # Es Digital
+                ET.SubElement(libro_xml, "tipo").text = "Digital"
+                ET.SubElement(libro_xml, "formato").text = getattr(libro, 'formato', 'PDF')
+                ET.SubElement(libro_xml, "tamano_mb").text = str(getattr(libro, 'tamano_mb', 0.0))
+                ET.SubElement(libro_xml, "url_descarga").text = getattr(libro, 'url_descarga', '')
 
-        # Escribimos el árbol XML en el archivo
         tree = ET.ElementTree(root)
         tree.write(ruta, encoding="utf-8", xml_declaration=True)
         print(f"✅ Respaldo XML generado exitosamente en {ruta}")
-
+        
 # Pruebas rápidas
 if __name__ == "__main__":
     biblioteca = Catalogo()

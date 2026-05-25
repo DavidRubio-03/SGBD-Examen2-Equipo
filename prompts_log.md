@@ -52,3 +52,72 @@
 **Código adoptado o modificado:** Agregué `mongo_repo.py` en la capa de Repositorios. En `main.py`, instancié el repositorio y lo conecté al `sistema_eventos` usando un delegado (callback) para que registre silenciosamente cualquier acción bajo el evento "ACTUALIZAR_VISTA".
 **Lo que aprendí / Lo que la IA no entendió:** Aprendí la diferencia de paradigmas: SQL requiere `CREATE TABLE` estricto, mientras que Mongo permite insertar diccionarios (JSON) directamente (`insert_one`). También aprendí qué es la "Degradación Elegante" usando bloques `try/except` en conexiones a red.
 **Temas de la materia que aplica este prompt:** Bases de Datos No Relacionales (NoSQL), Arquitectura Híbrida, Programación Defensiva (Manejo de Excepciones), Callbacks.
+### Prompt #6 (Fase 2: Multihilo y Gráficas de Datos)
+**Tarea:** Tareas 3.6 (Hilos y tareas en segundo plano) y 4.5 (Gráficas de datos).
+**LLM usada:** Gemini
+**Fecha/Hora:** 2026-05-25 12:30
+**Prompt enviado:** Necesito implementar dos procesos pesados usando hilos (workers) para que Tkinter no se congele. El primer hilo debe simular un reporte profundo y el segundo debe agrupar datos de inventario. Cuando el segundo termine, quiero que use matplotlib para renderizar 2 gráficas (una de pastel y una de barras) en la pantalla.
+**Respuesta recibida (resumen):** La IA generó un archivo `workers.py` heredando de `threading.Thread` para aislar los cálculos pesados usando `time.sleep()`. Implementó el método `root.after(0, callback)` en la GUI para devolver los resultados al hilo principal de forma segura. Finalmente, usó `plt.subplots(1, 2)` de `matplotlib` para mostrar simultáneamente el gráfico de pastel y el de barras exigidos.
+**Código adoptado o modificado:** Creé `workers.py` con `WorkerReporte` y `WorkerGraficas`. Modifiqué `main_window.py` para agregar los botones "Análisis Profundo" y "Ver Estadísticas". Implementé la función `mostrar_graficas` que usa `plt.show()` para desplegar la visualización.
+**Lo que aprendí / Lo que la IA no entendió:** Aprendí la regla de oro del UI: "Nunca bloquees el hilo principal". Comprendí que un hilo secundario no debe modificar los elementos gráficos directamente (puede causar crash), sino que debe usar delegados (callbacks) y la función `after()` para encolar la actualización visual.
+**Temas de la materia que aplica este prompt:** Concurrencia y Multihilo (Threading), Callbacks, Visualización de Datos (Matplotlib), Manejo del Event Loop de Tkinter.
+
+---
+
+### Prompt #7 (Fase 2: Excepciones y Manejo de Archivos)
+**Tarea:** Tareas 3.5 (Tratamiento de excepciones) y 3.7 (Manejo de archivos desde la interfaz).
+**LLM usada:** Gemini
+**Fecha/Hora:** 2026-05-25 12:35
+**Prompt enviado:** ¿Cómo aseguro los puntos de manejo de excepciones y archivos (3.5 y 3.7) en mi aplicación? ¿Podemos documentar cómo las funciones que ya hicimos (exportar XML/JSON con filedialog y conectar a Mongo) cubren estos requisitos indirectamente?
+**Respuesta recibida (resumen):** La IA confirmó que ambos requisitos fueron integrados orgánicamente. El manejo de excepciones se aseguró mediante "Programación Defensiva", usando bloques `try/except` en `mongo_repo.py` para evitar crasheos si el servidor falla, y en la GUI usando `messagebox.showerror`. El manejo de archivos se cumplió al integrar `tkinter.filedialog`, permitiendo al usuario elegir dónde exportar sus respaldos XML y JSON.
+**Código adoptado o modificado:** Integración de `tkinter.messagebox` y `filedialog` en la GUI. Uso de `try/except` para atrapar errores de conexión a bases de datos y fallos de I/O (lectura/escritura de archivos).
+**Lo que aprendí / Lo que la IA no entendió:** Aprendí que el manejo de archivos a nivel profesional usa diálogos nativos del sistema en lugar de rutas "quemadas" en el código. También comprendí que las excepciones deben traducirse en alertas visuales amigables o en una degradación elegante del sistema.
+**Temas de la materia que aplica este prompt:** Manejo de Excepciones (Try/Except), Flujos de Entrada/Salida (I/O File Handling), Interacción con el OS, Programación Defensiva.
+
+---
+
+### Prompt #8 (Fase 2: Integración de Herencia Examen 1 y Refactorización MVC)
+**Tarea:** Tarea 2.3 (Herencia de Modelos) y adaptación arquitectónica del CRUD y GUI.
+**LLM usada:** Gemini
+**Fecha/Hora:** 2026-05-25 12:40
+**Prompt enviado:** Faltó implementar la jerarquía completa de Libro -> LibroDigital y Libro -> LibroFisico del Examen 1, junto con las subclases de Usuario. Necesito integrar estos modelos y adaptar los repositorios SQL, la exportación XML y la GUI (incluyendo la restauración de las funciones gráficas de préstamo y devolución) sin perder datos.
+**Respuesta recibida (resumen):** La IA estructuró la herencia usando `super().__init__()` y polimorfismo (`puede_pedir_prestado()`). Luego, instruyó limpiar el `biblioteca.db` antiguo y adaptó `sqlite_repo.py` añadiendo las columnas de atributos digitales. Finalmente, dividió el formulario de la GUI en dos botones distintos ("Libro Físico" y "Libro Digital") con validaciones específicas y restauró los pop-ups de préstamos/devoluciones.
+**Código adoptado o modificado:** Reescritura completa de `modelos/libro.py` y `modelos/usuario.py`. Alteración del esquema DDL en `sqlite_repo.py`. Implementación polimórfica en la exportación de `catalogo.py` comprobando atributos con `hasattr()`. Modificación de `main_window.py` inyectando `ventana_prestamo` y `ventana_devolucion` con soporte de Tkinter `Toplevel`.
+**Lo que aprendí / Lo que la IA no entendió:** Entendí el impacto en cascada de cambiar un Modelo de Dominio: si modifico una clase base, debo reflejar ese cambio en la base de datos (SQL), en la vista (GUI) y en los servicios (XML). Es la demostración perfecta de por qué la separación en capas MVC es fundamental para escalar.
+**Temas de la materia que aplica este prompt:** Herencia, Polimorfismo, Encapsulamiento, DDL Dinámico en SQL, Refactorización, Patrón MVC.
+
+---
+
+### Prompt #9 (Fase 2: Documentación Final y README de Arquitectura)
+**Tarea:** Tarea 4.6 (Inyección de seed_data y documentación del despliegue técnico).
+**LLM usada:** Gemini
+**Fecha/Hora:** 2026-05-25 12:45
+**Prompt enviado:** Genera un archivo README.md final para el Examen 2 que detalle la estructura exacta del repositorio, la arquitectura MVC orientada a eventos, cómo se implementó el multihilo, la inyección automática de seed_data y la resiliencia de la base de datos híbrida.
+**Respuesta recibida (resumen):** La IA produjo la estructura técnica del README usando Markdown avanzado. Resaltó las ventajas del patrón observador, detalló el uso de subprocesos concurrentes y esquematizó el árbol del proyecto para agilizar la revisión del evaluador.
+**Código adoptado o modificado:** Actualización total del archivo `README.md` en la raíz del repositorio Git.
+**Lo que aprendí / Lo que la IA no entendió:** Aprendí que documentar los criterios de diseño (como la persistencia híbrida y la degradación elegante) es tan vital como escribir el código fuente, ya que permite sustentar las decisiones técnicas ante una auditoría o revisión académica.
+**Temas de la materia que aplica este prompt:** Documentación Técnica de Software, Arquitectura de Sistemas, Criterios de Calidad.
+
+---
+
+### Prompt #10 (Fase 2: Registro de usuarios Profesor y Administrador)
+**Tarea:** Ajuste de GUI para registrar perfiles de usuario completos.
+**LLM usada:** Gemini
+**Fecha/Hora:** 2026-05-25 12:55
+**Prompt enviado:** Necesito extender la interfaz de Tkinter para que no solo registre alumnos, sino también profesores y administradores con sus atributos específicos. Quiero un menú claro en la vista principal y formularios separados para cada tipo de usuario.
+**Respuesta recibida (resumen):** La IA propuso usar un `Menubutton` con entradas de registro para `Alumno`, `Profesor` y `Administrador`. También indicó añadir en `ui/main_window.py` las funciones `ventana_registrar_profesor` y `ventana_registrar_administrador`, con validaciones básicas y envío de eventos al dispatcher.
+**Código adoptado o modificado:** Se actualizó `ui/main_window.py` añadiendo el menú `Registrar Usuario` y los formularios de registro para `Profesor` y `Administrador`. Se ajustaron las importaciones a `from modelos.usuario import Alumno, Profesor, Administrador`.
+**Lo que aprendí / Lo que la IA no entendió:** Aprendí que en la GUI es mejor agrupar la creación de usuarios en un mismo menú cuando existen varios tipos de perfil. También vi que los modelos de dominio deben reflejarse en la vista para evitar tener tipos de usuario incompletos en la aplicación.
+**Temas de la materia que aplica este prompt:** Diseño de Interfaces, Herencia de Objetos, Separación de Vistas, Usabilidad de Menús.
+
+---
+
+### Prompt #11 (Fase 2: Validación de la GUI y verificación de compilación)
+**Tarea:** Comprobar la integridad del archivo de interfaz gráfico tras cambios en imports y nuevos métodos.
+**LLM usada:** Gemini
+**Fecha/Hora:** 2026-05-25 13:00
+**Prompt enviado:** ¿Cómo valido de forma limpia que mi archivo `ui/main_window.py` no tiene errores sintácticos después de agregar nuevos métodos y referencias a `Profesor` y `Administrador`? Dame la forma correcta de probarlo sin ejecutar toda la app.
+**Respuesta recibida (resumen):** La IA recomendó usar `python -m py_compile ui/main_window.py` para chequeo de sintaxis y mantener los cambios en un entorno virtual aislado. También sugirió usar `pytest` para pruebas unitarias si se dispone de tests de GUI o lógica desacoplada.
+**Código adoptado o modificado:** Se ejecutó la compilación con `py_compile` en `ui/main_window.py` y se conservó el respaldo de la estructura de archivos generada.
+**Lo que aprendí / Lo que la IA no entendió:** Aprendí que no siempre es necesario ejecutar la aplicación completa para detectar errores de sintaxis; basta un chequeo de compilación en Python para validar la integridad del módulo. También entendí que los cambios en el import de clases pueden ocasionar errores silenciosos si no se revisan con cuidado.
+**Temas de la materia que aplica este prompt:** Validación de Código, Entornos Virtuales, Pruebas de Integridad, Mantenimiento de Código.

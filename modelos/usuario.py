@@ -27,7 +27,7 @@ class Usuario(Entidad):
 
     # Nueva regla abstracta específica para usuarios
     @abstractmethod
-    def puede_pedir_prestado(self) -> bool:
+    def puede_pedir_prestado(self, cantidad_actual: int) -> bool:
         """Determina si el usuario tiene permitido solicitar más libros."""
         pass
 
