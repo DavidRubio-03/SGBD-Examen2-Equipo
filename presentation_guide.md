@@ -108,5 +108,3 @@
 - Si hay tiempo, comenta que los métodos de `Administrador` son stubs planificados para futuras extensiones (`agregar_libro()`, `eliminar_usuario()`), lo cual muestra diseño orientado a crecimiento.
 
 ---
-
-*Esta guía está pensada para que puedas explicar claramente dónde se alojan las cosas, cómo fluyen, y qué preguntas claves puedes responder sin dudar.*
